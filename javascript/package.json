@@ -1,0 +1,33 @@
+{
+  "name": "fenix-pipeline-sdk",
+  "version": "0.9.1",
+  "description": "An SDK to connect to the Fenix Pipeline API",
+  "main": "src/index.js",
+  "browser": "src/browser.js",
+  "unpkg": "dist/fenix-pipeline-sdk.js",
+  "scripts": {
+    "bundle": "webpack"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fenix-blockchain/fenix-pipeline.git"
+  },
+  "keywords": [
+    "fenix",
+    "websocket",
+    "cryptocurrency"
+  ],
+  "author": "Fenix Blockchain Technology <support@fenixblockchain.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/fenix-blockchain/fenix-pipeline/issues"
+  },
+  "homepage": "https://github.com/fenix-blockchain/fenix-pipeline#readme",
+  "dependencies": {
+    "ws": "^7.1.2"
+  },
+  "devDependencies": {
+    "webpack": "^4.41.0",
+    "webpack-cli": "^3.3.9"
+  }
+}
