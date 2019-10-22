@@ -32,6 +32,10 @@ async def simple_sample(event_loop):
         await subscriber.subscribe(
             SubscriptionTypes.TRADES_BY_MARKET, 'btc-usdt')
         # just receive messages for the next 10 seconds
+        for i in range(10):
+            if not subscriber.connected:
+                return
+            await asyncio.sleep(1)
         await asyncio.sleep(10)
         # unsubscribe from the `btc-usdt` stream
         await subscriber.unsubscribe(
@@ -68,6 +72,14 @@ with socket.connect(my_message_handler) as subscriber:
 ```
 
 **Note:** all following sections assume you are using the name `subscriber` as shown above.
+
+Once you have a subscriber, you can check it's current connection state with the `.connected` property:
+
+```python
+if not subscriber.connected:
+    # the connection has been closed
+    return
+```
 
 
 ### Subscribing to Channels

@@ -49,6 +49,8 @@ class SubscriptionTypes(enum.Enum):
 
 _API_VERSION = 'beta'
 
+_OPEN = websockets.protocol.State.OPEN
+
 
 class RawDataSocket:
 
@@ -64,25 +66,36 @@ class RawDataSocket:
             ('authorization', f'bearer {self._apikey}'),
             ('x-api-version', _API_VERSION),
         )
-        log.debug('connecting to: %s', self.uri)
+        log.info('connecting to: %s', self.uri)
         self._socket = await websockets.connect(self.uri, extra_headers=extra_headers)
         self._message_handler = message_handler
         return self
 
     async def subscribe(self, kind, name):
-        log.debug('subscribing: %s/%s', kind.name, name)
+        log.info('subscribing: %s/%s', kind.name, name)
         channel = await self._get_channel_name(kind, name)
         await self._send(dict(request='subscribe', channel=channel))
 
     async def unsubscribe(self, kind, name):
-        log.debug('unsubscribing: %s/%s', kind.name, name)
+        log.info('unsubscribing: %s/%s', kind.name, name)
         channel = await self._get_channel_name(kind, name)
         await self._send(dict(request='unsubscribe', channel=channel))
 
+    @property
+    def connected(self):
+        return self._socket.state == _OPEN
+
     async def _close(self):
-        await self._send(dict(request='close'))
+        if not self._socket:
+            return
+        log.info('disconnecting from: %s', self.uri)
+        try:
+            await self._send(dict(request='close'))
+        except websockets.ConnectionClosedError:
+            log.debug('connection already closed')
+        except Exception:
+            pass
         await self._socket.close()
-        self._socket = None
 
     async def _send(self, message):
         log.debug('sending message: %s', message)
@@ -96,8 +109,12 @@ class RawDataSocket:
                 if data['type'] == 'data':
                     data = Trade.fromdictstr(data['message']['data'])
                 await handler(data)
+        except websockets.ConnectionClosedError as e:
+            log.debug('connection closed while waiting: %s', e)
         except Exception as e:
             log.exception(e)
+        finally:
+            log.info('receive loop stopped')
             await self._close()
 
     async def _get_channel_name(self, kind, name=None):
@@ -118,4 +135,5 @@ class RawDataSocket:
     async def __aexit__(self, exc_type, exc_value, traceback):
         log.debug('exiting context manager')
         await self._close()
+        self._socket = None
         await asyncio.gather(self._receiver_task)
