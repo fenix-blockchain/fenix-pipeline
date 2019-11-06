@@ -47,6 +47,11 @@ class SubscriptionTypes(enum.Enum):
     ALL_TRADES = 'trades/all'
 
 
+class ConnectionClosed(Exception):
+
+    pass
+
+
 _API_VERSION = 'beta'
 
 _OPEN = websockets.protocol.State.OPEN
@@ -60,6 +65,7 @@ class RawDataSocket:
         super().__init__()
         self._apikey = apikey
         self._event_loop = event_loop if event_loop else asyncio.get_event_loop()
+        self._monitor_task = None
 
     async def connect(self, message_handler):
         extra_headers = (
@@ -85,7 +91,25 @@ class RawDataSocket:
     def connected(self):
         return self._socket.state == _OPEN
 
+    async def monitor(self, timeout=None):
+        async def _monitor():
+            while True:
+                log.debug('monitor task sleeping')
+                await asyncio.sleep(60 * 60 * 24)
+        try:
+            self._monitor_task = self._event_loop.create_task(_monitor())
+            await asyncio.wait_for(self._monitor_task, timeout=timeout, loop=self._event_loop)
+        except asyncio.TimeoutError:
+            pass
+        except asyncio.CancelledError:
+            raise ConnectionClosed
+        finally:
+            self._monitor_task = None
+
     async def _close(self):
+        if self._monitor_task:
+            self._monitor_task.cancel()
+            self._monitor_task = None
         if not self._socket:
             return
         log.info('disconnecting from: %s', self.uri)

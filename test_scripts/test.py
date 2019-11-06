@@ -4,6 +4,7 @@ import os
 
 import websockets
 
+from fenix_pipeline import ConnectionClosed
 from fenix_pipeline import RawDataSocket
 from fenix_pipeline import SubscriptionTypes
 from fenix_pipeline import Trade
@@ -33,14 +34,11 @@ async def test_socket_lifecycle(event_loop):
             log.info('subscribing')
             for subscription in subscriptions:
                 await subscriber.subscribe(*subscription)
-            for i in range(RUN_DURATION):
-                if not subscriber.connected:
-                    raise websockets.ConnectionClosed
-                await asyncio.sleep(1)
+            await subscriber.monitor(RUN_DURATION)
             log.info('unsubscribing')
             for subscription in subscriptions:
                 await subscriber.unsubscribe(*subscription)
-    except websockets.exceptions.ConnectionClosed:
+    except ConnectionClosed:
         log.info('socket closed, exiting lifecycle loop')
     finally:
         if message_emitter and not message_emitter.done():
@@ -62,11 +60,7 @@ async def simple_sample(event_loop):
         await subscriber.subscribe(
             SubscriptionTypes.TRADES_BY_MARKET, 'btc-usdt')
         # just receive messages for the next 10 seconds
-        for i in range(10):
-            if not subscriber.connected:
-                return
-            await asyncio.sleep(1)
-        await asyncio.sleep(10)
+        await subscriber.monitor(10)
         # unsubscribe from the `btc-usdt` stream
         await subscriber.unsubscribe(
             SubscriptionTypes.TRADES_BY_MARKET, 'btc-usdt')

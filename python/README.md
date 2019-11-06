@@ -19,6 +19,7 @@ The following program demonstrates the basic use of the SDK:
 import asyncio
 import os
 
+from fenix_pipeline import ConnectionClosed
 from fenix_pipeline import RawDataSocket
 from fenix_pipeline import SubscriptionTypes
 from fenix_pipeline import Trade
@@ -32,11 +33,7 @@ async def simple_sample(event_loop):
         await subscriber.subscribe(
             SubscriptionTypes.TRADES_BY_MARKET, 'btc-usdt')
         # just receive messages for the next 10 seconds
-        for i in range(10):
-            if not subscriber.connected:
-                return
-            await asyncio.sleep(1)
-        await asyncio.sleep(10)
+        await subscriber.monitor(10)
         # unsubscribe from the `btc-usdt` stream
         await subscriber.unsubscribe(
             SubscriptionTypes.TRADES_BY_MARKET, 'btc-usdt')
@@ -68,7 +65,8 @@ socket = RawDataSocket(my_api_key)
 # alternate, condensed version
 with socket.connect(my_message_handler) as subscriber:
     # ... interact with server
-    asyncio.sleep(1)
+    # now sleep this coroutine
+    await subscriber.monitor(10)
 ```
 
 **Note:** all following sections assume you are using the name `subscriber` as shown above.
@@ -78,8 +76,23 @@ Once you have a subscriber, you can check it's current connection state with the
 ```python
 if not subscriber.connected:
     # the connection has been closed
-    return
+    pass
 ```
+
+You can let the subscriber receive events for a prescribed amount of time or indefinitely using the `.monitor()` method:
+
+```python
+try:
+    # monitor for 10 seconds
+    await subscriber.monitor(timeout=10)
+    # monitor indefinitely
+    await subscriber.monitor()
+except ConnectionClosed:
+    # the connection to the API was closed unexpectedly
+    pass
+```
+
+The subscriber will continue to receive data after the call to `.monitor()` returns; this is simply a convenience method to sleep the context manager while data is being received.
 
 
 ### Subscribing to Channels

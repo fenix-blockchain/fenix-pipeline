@@ -19,7 +19,7 @@ test_dependencies = (
 
 setuptools.setup(
     name='fenix-pipeline-sdk',
-    version='0.9.2',
+    version='0.9.3',
     author='Fenix Blockchain Technology',
     author_email='support@fenixblockchain.com',
     description='SDK for interacting with the Fenix Pipeline API',
